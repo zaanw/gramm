@@ -19,6 +19,7 @@ For license and copyright information see the repository's LEGAL file.
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QSaveFile>
 #include <QtGui/QImageReader>
@@ -29,6 +30,18 @@ namespace {
 constexpr auto kRoundedIconsPref = "gramm/settings/rounded-icons";
 constexpr auto kMaxConfigBytes = 16 * 1024;
 constexpr auto kMaxIconBytes = 2 * 1024 * 1024;
+constexpr auto kMaxLocalProfileBytes = 16 * 1024;
+constexpr auto kMaxLocalGifts = 32;
+constexpr auto kLocalProfilePrefix = "gramm/profile-local/";
+
+[[nodiscard]] QString LocalProfileKey(quint64 sessionId) {
+	return QString::fromLatin1(kLocalProfilePrefix)
+		+ QString::number(sessionId);
+}
+
+[[nodiscard]] QString ClampLocalText(QString value, int maxLength) {
+	return value.trimmed().left(maxLength);
+}
 
 void ApplyIcon(QImage image) {
 	auto bytes = QByteArray();
@@ -117,6 +130,77 @@ rpl::event_stream<> &SettingsImported() {
 }
 
 } // namespace
+
+GrammLocalProfileData LoadGrammLocalProfile(quint64 sessionId) {
+	GrammLocalProfileData result;
+	const auto bytes = Core::App().settings().readPref<QByteArray>(
+		LocalProfileKey(sessionId).toStdString());
+	if (bytes.isEmpty() || bytes.size() > kMaxLocalProfileBytes) {
+		return result;
+	}
+	const auto document = QJsonDocument::fromJson(bytes);
+	if (!document.isObject()) {
+		return result;
+	}
+	const auto object = document.object();
+	if (object.value(u"ownerBadge"_q).isBool()) {
+		result.ownerBadge = object.value(u"ownerBadge"_q).toBool();
+	}
+	if (object.value(u"number"_q).isString()) {
+		result.number = ClampLocalText(
+			object.value(u"number"_q).toString(),
+			64);
+	}
+	const auto gifts = object.value(u"gifts"_q).toArray();
+	for (const auto &value : gifts) {
+		const auto gift = value.toObject();
+		if (!gift.value(u"name"_q).isString()
+			|| !gift.value(u"pattern"_q).isString()
+			|| !gift.value(u"background"_q).isString()) {
+			continue;
+		}
+		result.gifts.push_back({
+			.name = ClampLocalText(gift.value(u"name"_q).toString(), 64),
+			.pattern = ClampLocalText(gift.value(u"pattern"_q).toString(), 128),
+			.background = ClampLocalText(
+				gift.value(u"background"_q).toString(),
+				128),
+		});
+		if (result.gifts.size() == kMaxLocalGifts) {
+			break;
+		}
+	}
+	return result;
+}
+
+void SaveGrammLocalProfile(
+		quint64 sessionId,
+		const GrammLocalProfileData &data) {
+	QJsonArray gifts;
+	for (const auto &gift : data.gifts) {
+		if (gifts.size() == kMaxLocalGifts) {
+			break;
+		}
+		gifts.append(QJsonObject{
+			{ u"name"_q, ClampLocalText(gift.name, 64) },
+			{ u"pattern"_q, ClampLocalText(gift.pattern, 128) },
+			{ u"background"_q, ClampLocalText(gift.background, 128) },
+		});
+	}
+	const auto bytes = QJsonDocument(QJsonObject{
+		{ u"version"_q, 1 },
+		{ u"ownerBadge"_q, data.ownerBadge },
+		{ u"number"_q, ClampLocalText(data.number, 64) },
+		{ u"gifts"_q, gifts },
+	}).toJson(QJsonDocument::Compact);
+	if (bytes.size() > kMaxLocalProfileBytes) {
+		return;
+	}
+	Core::App().settings().writePref<QByteArray>(
+		LocalProfileKey(sessionId).toStdString(),
+		bytes);
+	Core::App().saveSettingsDelayed();
+}
 
 rpl::producer<bool> GrammRoundedIcons() {
 	return RoundedIcons().value();

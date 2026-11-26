@@ -36,6 +36,9 @@ For license and copyright information see the repository's LEGAL file.
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "styles/style_info.h"
+
+#include <memory>
 
 namespace Settings {
 namespace {
@@ -126,6 +129,56 @@ void SetupProfile(
 		settings.readPref<QByteArray>(key));
 	const auto preview = content->lifetime().make_state<rpl::variable<QString>>(
 		initial);
+	const auto localProfile = std::make_shared<GrammLocalProfileData>(
+		LoadGrammLocalProfile(controller->session().uniqueId()));
+	const auto ownerBadge = content->lifetime().make_state<rpl::variable<bool>>(
+		localProfile->ownerBadge);
+	const auto localProfilePreview = content->lifetime().make_state<
+		rpl::variable<QString>>(QString());
+	const auto refreshLocalProfilePreview = [=] {
+		auto text = localProfile->ownerBadge
+			? u"👑 G  ·  Owner Gramm"_q
+			: tr::lng_gramm_owner_badge_disabled(tr::now);
+		if (!localProfile->number.isEmpty()) {
+			text += u"\n"_q + tr::lng_gramm_local_number_value(
+				tr::now,
+				lt_number,
+				localProfile->number);
+		}
+		if (localProfile->gifts.empty()) {
+			text += u"\n"_q + tr::lng_gramm_gifts_empty(tr::now);
+		} else {
+			text += u"\n"_q + tr::lng_gramm_gifts_count(
+				tr::now,
+				lt_count,
+				int(localProfile->gifts.size()));
+			for (const auto &gift : localProfile->gifts) {
+				text += u"\n🎁 "_q + gift.name
+					+ u" · "_q + gift.pattern
+					+ u" · "_q + gift.background;
+			}
+		}
+		*localProfilePreview = text;
+	};
+	refreshLocalProfilePreview();
+	Ui::AddDividerText(content, localProfilePreview->value());
+	const auto badge = content->add(object_ptr<DetailedSettingsButton>(
+		content,
+		tr::lng_gramm_owner_badge(),
+		tr::lng_gramm_owner_badge_about(),
+		{ &st::infoStarsCrown },
+		ownerBadge->value(),
+		st::grammHubRow));
+	badge->setToolTip(tr::lng_gramm_owner_badge_tooltip(tr::now));
+	badge->toggledChanges() | rpl::on_next([=](bool enabled) {
+		localProfile->ownerBadge = enabled;
+		SaveGrammLocalProfile(
+			controller->session().uniqueId(),
+			*localProfile);
+		*ownerBadge = enabled;
+		refreshLocalProfilePreview();
+	}, badge->lifetime());
+	Ui::AddDividerText(content, tr::lng_gramm_local_only_profile());
 	const auto field = AddInput(
 		content,
 		Ui::InputField::Mode::SingleLine,
@@ -143,12 +196,77 @@ void SetupProfile(
 		Core::App().saveSettingsDelayed();
 		*preview = name;
 	};
+	const auto number = AddInput(
+		content,
+		Ui::InputField::Mode::SingleLine,
+		tr::lng_gramm_local_number(),
+		localProfile->number);
+	number->setMaxLength(64);
+	const auto giftName = AddInput(
+		content,
+		Ui::InputField::Mode::SingleLine,
+		tr::lng_gramm_gift_name());
+	giftName->setMaxLength(64);
+	const auto giftPattern = AddInput(
+		content,
+		Ui::InputField::Mode::SingleLine,
+		tr::lng_gramm_gift_pattern());
+	giftPattern->setMaxLength(128);
+	const auto giftBackground = AddInput(
+		content,
+		Ui::InputField::Mode::SingleLine,
+		tr::lng_gramm_gift_background());
+	giftBackground->setMaxLength(128);
+	AddAction(content, tr::lng_gramm_gift_add(), [=] {
+		const auto name = giftName->getLastText().trimmed();
+		if (name.isEmpty()) {
+			giftName->showError();
+			return;
+		}
+		localProfile->gifts.push_back({
+			.name = name,
+			.pattern = giftPattern->getLastText().trimmed(),
+			.background = giftBackground->getLastText().trimmed(),
+		});
+		SaveGrammLocalProfile(
+			controller->session().uniqueId(),
+			*localProfile);
+		giftName->setText(QString());
+		giftPattern->setText(QString());
+		giftBackground->setText(QString());
+		refreshLocalProfilePreview();
+		controller->showToast(tr::lng_gramm_gift_added(tr::now));
+	});
+	AddAction(content, tr::lng_gramm_profile_save_local(), [=] {
+		localProfile->number = number->getLastText().trimmed();
+		SaveGrammLocalProfile(
+			controller->session().uniqueId(),
+			*localProfile);
+		refreshLocalProfilePreview();
+		controller->showToast(tr::lng_gramm_profile_saved(tr::now));
+	});
+	AddAction(content, tr::lng_gramm_gifts_clear(), [=] {
+		localProfile->gifts.clear();
+		SaveGrammLocalProfile(
+			controller->session().uniqueId(),
+			*localProfile);
+		refreshLocalProfilePreview();
+	});
 	AddAction(content, tr::lng_settings_save(), [=] {
 		save(field->getLastText().trimmed());
 	});
 	AddAction(content, tr::lng_gramm_profile_reset(), [=] {
 		field->setText(QString());
 		save(QString());
+		number->setText(QString());
+		localProfile->number.clear();
+		localProfile->gifts.clear();
+		localProfile->ownerBadge = true;
+		SaveGrammLocalProfile(
+			controller->session().uniqueId(),
+			*localProfile);
+		*ownerBadge = true;
+		refreshLocalProfilePreview();
 	});
 }
 

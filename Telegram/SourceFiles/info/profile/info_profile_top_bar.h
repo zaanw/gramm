@@ -298,6 +298,7 @@ private:
 	uint64 _badgeCollectibleId = 0;
 
 	object_ptr<Ui::MarqueeLabel> _title;
+	object_ptr<Ui::FlatLabel> _grammOwnerBadge = { nullptr };
 	std::unique_ptr<Ui::StarsRating> _starsRating;
 	std::unique_ptr<Ui::AnimatedString> _tabSubtitle;
 	QString _tabSubtitleText;
