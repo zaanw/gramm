@@ -3,13 +3,6 @@ name: Gramm Windows x64
 on:
   push:
     branches: [codex/setup]
-    paths:
-      - '.github/workflows/win.yml'
-      - '.gitmodules'
-      - 'CMakeLists.txt'
-      - 'cmake'
-      - 'cmake/**'
-      - 'Telegram/**'
   workflow_dispatch:
 
 permissions:
