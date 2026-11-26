@@ -50,9 +50,12 @@ jobs:
           sdk: '10.0.26100.0'
           toolset: '14.44'
 
-      - name: Set up dependency directories
+      - name: Check the target and set up dependency directories
         shell: pwsh
         run: |
+          if ($env:VSCMD_ARG_TGT_ARCH -ne 'x64' -or $env:Platform -ne 'x64') {
+            throw 'Use the x64 Native Tools Command Prompt'
+          }
           New-Item -ItemType Directory -Force TBuild/ThirdParty, TBuild/Libraries/win64 | Out-Null
           git config --global user.name "Gramm Windows CI"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
