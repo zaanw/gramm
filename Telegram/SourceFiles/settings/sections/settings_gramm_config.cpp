@@ -282,6 +282,7 @@ GrammLocalProfileData LoadGrammSharedProfile(qint64 peerId) {
 		return i->second;
 	}
 	GrammLocalProfileData result;
+	result.ownerBadge = false;
 	if (peerId <= 0) {
 		return result;
 	}
