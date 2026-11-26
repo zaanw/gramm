@@ -66,7 +66,7 @@ jobs:
         working-directory: TBuild/gramm
         run: call Telegram\build\prepare\win.bat skip-release silent
 
-      - name: Configure the baseline client
+      - name: Configure the Gramm client
         working-directory: TBuild/gramm/Telegram
         run: >-
           call configure.bat -G "Ninja Multi-Config"
@@ -83,7 +83,8 @@ jobs:
       - name: Verify and package the executable
         shell: pwsh
         run: |
-          $exe = Get-Item -LiteralPath TBuild/gramm/out/Debug/Telegram.exe
+          $exe = Get-Item -LiteralPath TBuild/gramm/out/Debug/Gramm.exe
+          if ($exe.VersionInfo.ProductName -ne 'Gramm') { throw 'Expected Gramm product metadata' }
           $stream = [IO.File]::OpenRead($exe.FullName)
           try {
             $reader = [IO.BinaryReader]::new($stream)
@@ -100,14 +101,14 @@ jobs:
           Copy-Item -LiteralPath $exe.FullName -Destination artifact
           Copy-Item -LiteralPath TBuild/gramm/LICENSE, TBuild/gramm/LEGAL -Destination artifact
           $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  Telegram.exe" | Set-Content -Encoding ascii artifact/SHA256SUMS.txt
+          "$hash  Gramm.exe" | Set-Content -Encoding ascii artifact/SHA256SUMS.txt
           "Source commit: $env:GITHUB_SHA" | Set-Content -Encoding utf8 artifact/build-info.txt
           "Configuration: Windows x64 Debug, Telegram test API ID" | Add-Content -Encoding utf8 artifact/build-info.txt
 
-      - name: Upload baseline executable
+      - name: Upload Gramm executable
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: gramm-windows-x64-baseline-${{ github.sha }}
+          name: gramm-windows-x64-${{ github.sha }}
           path: artifact/
           if-no-files-found: error
           retention-days: 14

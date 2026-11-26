@@ -2,8 +2,7 @@
 
 ## GitHub Actions
 
-Changes to dependency pins, build inputs, or client sources on `codex/setup`
-trigger [Gramm Windows x64](../.github/workflows/win.yml). The job checks out
+Pushes to `codex/setup` trigger [Gramm Windows x64](../.github/workflows/win.yml). The job checks out
 recursive submodules, prepares the pinned upstream dependencies, and builds the
 Telegram CMake target in Debug on `windows-2025` with MSVC 14.44. The first
 build also compiles dependencies such as Qt and FFmpeg.
@@ -14,11 +13,13 @@ set up. [GitHub Actions event reference](https://docs.github.com/en/actions/refe
 
 Open the run for the desired commit from
 [GitHub Actions](https://github.com/zaanw/gramm/actions?query=branch%3Acodex%2Fsetup).
-A successful baseline produces the artifact
-`gramm-windows-x64-baseline-<commit SHA>` containing `Telegram.exe`, the
+A successful build produces the artifact
+`gramm-windows-x64-<commit SHA>` containing `Gramm.exe`, the
 license notices, `SHA256SUMS.txt`, and `build-info.txt`. The packaging step
-checks the PE machine type is AMD64 before uploading. This baseline is an
+checks the PE machine type is AMD64 before uploading. This workflow produces an
 unsigned build using Telegram's limited test API credentials.
+
+[The initial upstream baseline build](https://github.com/zaanw/gramm/actions/runs/45833040278) produced `Telegram.exe` at commit `74ebb4a`.
 
 ## Build locally
 

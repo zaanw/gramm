@@ -1663,6 +1663,8 @@ PRIVATE
     media/player/media_player_float.h
     media/player/media_player_instance.cpp
     media/player/media_player_instance.h
+    media/player/media_player_music_queue.cpp
+    media/player/media_player_music_queue.h
     media/player/media_player_listen_tracker.cpp
     media/player/media_player_listen_tracker.h
     media/player/media_player_panel.cpp
@@ -2082,6 +2084,8 @@ PRIVATE
     settings/sections/settings_local_storage.cpp
     settings/sections/settings_local_storage.h
     settings/sections/settings_main.cpp
+    settings/sections/settings_gramm.cpp
+    settings/sections/settings_gramm.h
     settings/sections/settings_main.h
     settings/settings_recent_searches.cpp
     settings/settings_recent_searches.h
@@ -3000,6 +3004,10 @@ if (CMAKE_GENERATOR STREQUAL Xcode)
     set(bundle_identifier_plist "$(PRODUCT_BUNDLE_IDENTIFIER)")
 else()
     set(bundle_identifier_plist ${bundle_identifier})
+endif()
+
+if (WIN32)
+    set(output_name "Gramm")
 endif()
 
 set_target_properties(Telegram PROPERTIES
