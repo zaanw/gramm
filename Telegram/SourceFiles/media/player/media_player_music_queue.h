@@ -33,8 +33,12 @@ public:
 	void remove(MusicQueueTrack track);
 	void move(MusicQueueTrack track, int delta);
 	void clear();
+	void remember(const AudioMsgId &id);
+	void clearRecent();
 
 	[[nodiscard]] const std::vector<MusicQueueTrack> &tracks() const;
+	[[nodiscard]] const std::vector<MusicQueueTrack> &recent() const;
+	[[nodiscard]] rpl::producer<> recentChanges() const;
 	[[nodiscard]] AudioMsgId resolve(MusicQueueTrack track) const;
 	[[nodiscard]] AudioMsgId adjacent(
 		const AudioMsgId &current,
@@ -48,7 +52,10 @@ private:
 
 	not_null<Main::Session*> _session;
 	std::vector<MusicQueueTrack> _tracks;
+	std::vector<MusicQueueTrack> _recent;
+	MusicQueueTrack _lastRemembered;
 	rpl::event_stream<> _changes;
+	rpl::event_stream<> _recentChanges;
 	rpl::lifetime _lifetime;
 };
 

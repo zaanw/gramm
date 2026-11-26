@@ -21,7 +21,8 @@ public:
 		rpl::producer<QString> description,
 		Settings::IconDescriptor icon,
 		std::optional<rpl::producer<bool>> toggled,
-		const style::DetailedSettingsButtonStyle &rowStyle);
+		const style::DetailedSettingsButtonStyle &rowStyle,
+		bool navigation = false);
 
 	QString accessibilityName() override;
 	Ui::AccessibilityState accessibilityState() const override;
@@ -60,6 +61,7 @@ private:
 	const style::icon *_iconForeground = nullptr;
 	const style::color *_iconBackground = nullptr;
 	const std::optional<QBrush> _iconBackgroundBrush;
+	const bool _navigation;
 	int _titleWidth = 0;
 	int _descriptionWidth = 0;
 	int _descriptionTop = 0;

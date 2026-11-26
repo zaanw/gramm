@@ -25,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "iv/iv_rich_page.h"
 #include "lang/lang_instance.h"
 #include "lang/lang_keys.h"
+#include "lang/translate_mtproto_provider.h"
 #include "lang/translate_provider.h"
 #include "main/main_session.h"
 #include "mtproto/sender.h"
@@ -446,21 +447,22 @@ bool ShowRichArticlePage(
 
 } // namespace
 
-void TranslateBox(
+static void TranslateBoxWithProvider(
 		not_null<Ui::GenericBox*> box,
 		not_null<PeerData*> peer,
 		MsgId msgId,
 		TextWithEntities text,
-		bool hasCopyRestriction) {
+		bool hasCopyRestriction,
+		std::unique_ptr<TranslateProvider> provider) {
 	struct State {
-		State(not_null<Main::Session*> session)
-		: provider(CreateTranslateProvider(session)) {
+		State(std::unique_ptr<TranslateProvider> instance)
+		: provider(std::move(instance)) {
 		}
 
 		std::unique_ptr<TranslateProvider> provider;
 		rpl::variable<LanguageId> to;
 	};
-	const auto state = box->lifetime().make_state<State>(&peer->session());
+	const auto state = box->lifetime().make_state<State>(std::move(provider));
 	if (IsServerMsgId(msgId) && state->provider->supportsMessageId()) {
 		if (const auto item = peer->owner().message(peer->id, msgId)) {
 			if (const auto page = item->richPage()) {
@@ -515,6 +517,34 @@ void TranslateBox(
 				});
 		},
 	});
+}
+
+void TranslateBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<PeerData*> peer,
+		MsgId msgId,
+		TextWithEntities text,
+		bool hasCopyRestriction) {
+	TranslateBoxWithProvider(
+		box,
+		peer,
+		msgId,
+		std::move(text),
+		hasCopyRestriction,
+		CreateTranslateProvider(&peer->session()));
+}
+
+void TranslateTextWithTelegramBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<PeerData*> peer,
+		TextWithEntities text) {
+	TranslateBoxWithProvider(
+		box,
+		peer,
+		MsgId(),
+		std::move(text),
+		false,
+		CreateMTProtoTranslateProvider(&peer->session()));
 }
 
 bool SkipTranslate(TextWithEntities textWithEntities) {

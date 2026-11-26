@@ -5,12 +5,16 @@ For license and copyright information see the repository's LEGAL file.
 */
 #include "settings/sections/settings_gramm.h"
 
+#include "core/application.h"
+#include "core/core_settings.h"
 #include "lang/lang_keys.h"
+#include "media/media_common.h"
 #include "media/player/media_player_instance.h"
 #include "media/player/media_player_music_queue.h"
 #include "settings/settings_common_session.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/format_song_document_name.h"
+#include "ui/ui_utility.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/wrap/vertical_layout.h"
@@ -76,20 +80,47 @@ void ShowQueueTrack(
 	}));
 }
 
-class Gramm final : public Section<Gramm> {
+class MusicPlus final : public Section<MusicPlus> {
 public:
-	Gramm(QWidget *parent, not_null<Window::SessionController*> controller);
+	MusicPlus(QWidget *parent, not_null<Window::SessionController*> controller);
 
 	[[nodiscard]] rpl::producer<QString> title() override;
 };
 
-Gramm::Gramm(
+MusicPlus::MusicPlus(
 		QWidget *parent,
 		not_null<Window::SessionController*> controller)
 : Section(parent, controller) {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 	Ui::AddDivider(content);
-	Ui::AddSubsectionTitle(content, tr::lng_gramm_music());
+	const auto &settings = Core::App().settings();
+	AddQueueButton(
+		content,
+		settings.playerRepeatModeValue() | rpl::map([](Media::RepeatMode mode)
+		-> rpl::producer<QString> {
+			switch (mode) {
+			case Media::RepeatMode::One: return tr::lng_gramm_repeat_one();
+			case Media::RepeatMode::All: return tr::lng_gramm_repeat_all();
+			case Media::RepeatMode::None: return tr::lng_gramm_repeat_off();
+			}
+			Unexpected("Music repeat mode.");
+		}) | rpl::flatten_latest(),
+		[] {
+			auto &settings = Core::App().settings();
+			switch (settings.playerRepeatMode()) {
+			case Media::RepeatMode::None:
+				settings.setPlayerRepeatMode(Media::RepeatMode::One);
+				break;
+			case Media::RepeatMode::One:
+				settings.setPlayerRepeatMode(Media::RepeatMode::All);
+				break;
+			case Media::RepeatMode::All:
+				settings.setPlayerRepeatMode(Media::RepeatMode::None);
+				break;
+			}
+			Core::App().saveSettingsDelayed();
+		});
+	Ui::AddSubsectionTitle(content, tr::lng_gramm_queue_title());
 	const auto list = content->add(object_ptr<Ui::VerticalLayout>(content));
 	const auto player = Media::Player::instance();
 	const auto session = &controller->session();
@@ -98,6 +129,37 @@ Gramm::Gramm(
 		tr::lng_gramm_music_clear(),
 		[=] { player->musicQueue(session).clear(); });
 	Ui::AddDividerText(content, tr::lng_gramm_music_about());
+	Ui::AddDivider(content);
+	Ui::AddSubsectionTitle(content, tr::lng_gramm_history_title());
+	const auto recent = content->add(object_ptr<Ui::VerticalLayout>(content));
+	const auto clearRecent = AddQueueButton(
+		content,
+		tr::lng_gramm_history_clear(),
+		[=] { player->musicQueue(session).clearRecent(); });
+
+	const auto refreshRecent = [=] {
+		recent->clear();
+		const auto &queue = player->musicQueue(session);
+		clearRecent->setVisible(!queue.recent().empty());
+		if (queue.recent().empty()) {
+			Ui::AddDividerText(recent, tr::lng_gramm_history_empty());
+			return;
+		}
+		for (const auto track : queue.recent()) {
+			if (const auto audio = queue.resolve(track)) {
+				AddQueueButton(recent, rpl::single(
+					Ui::Text::FormatSongNameFor(audio.audio()).string()), [=] {
+					if (const auto ready = player->musicQueue(session).resolve(track)) {
+						player->play(ready);
+					}
+				});
+			}
+		}
+	};
+	player->musicQueue(session).recentChanges() | rpl::on_next([=] {
+		Ui::PostponeCall(crl::guard(recent, refreshRecent));
+	}, lifetime());
+	refreshRecent();
 
 	const auto refresh = [=] {
 		list->clear();
@@ -135,14 +197,14 @@ Gramm::Gramm(
 	Ui::ResizeFitChild(this, content);
 }
 
-rpl::producer<QString> Gramm::title() {
-	return tr::lng_gramm_settings();
+rpl::producer<QString> MusicPlus::title() {
+	return tr::lng_gramm_music();
 }
 
 } // namespace
 
-Type GrammId() {
-	return Gramm::Id();
+Type GrammMusicId() {
+	return MusicPlus::Id();
 }
 
 } // namespace Settings

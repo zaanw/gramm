@@ -778,6 +778,24 @@ logoutOptionsButtonStyle: DetailedSettingsButtonStyle(detailedSettingsButtonStyl
 	iconForegroundPadding: 2px;
 }
 
+grammHubRow: DetailedSettingsButtonStyle(detailedSettingsButtonStyle) {
+	button: SettingsButton(settingsButtonNoIconLocked) {
+		style: defaultTextStyle;
+		textBg: windowBg;
+		textBgOver: windowBgOver;
+		padding: margins(64px, 9px, 18px, 8px);
+		iconLeft: 12px;
+	}
+	iconRadius: 12px;
+	descriptionTopSkip: 4px;
+	descriptionBottomSkip: 10px;
+	descriptionRightSkip: 8px;
+}
+
+grammHubRowSquare: DetailedSettingsButtonStyle(grammHubRow) {
+	iconRadius: 3px;
+}
+
 logoutIconAddAccount: icon {{ "logout/add_account-24x24", menuIconColor }};
 logoutIconSetPasscode: icon {{ "logout/set_passcode-24x24", menuIconColor }};
 logoutIconClearCache: icon {{ "logout/clear_cache-24x24", menuIconColor }};

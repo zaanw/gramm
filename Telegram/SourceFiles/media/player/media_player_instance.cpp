@@ -1500,6 +1500,9 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 		}
 		if (type == AudioMsgId::Type::Song) {
 			_listenTracker->update(state);
+			if (data->session && state.state == State::Playing) {
+				musicQueue(data->session).remember(state.id);
+			}
 		}
 
 		auto finished = false;

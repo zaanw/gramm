@@ -22,10 +22,14 @@ MusicQueue::MusicQueue(not_null<Main::Session*> session)
 : _session(session) {
 	session->data().itemRemoved(
 	) | rpl::on_next([=](not_null<const HistoryItem*> item) {
-		if (std::erase_if(_tracks, [&](const MusicQueueTrack &track) {
-				return (track.message == item->fullId());
-			})) {
+		const auto matches = [&](const MusicQueueTrack &track) {
+			return (track.message == item->fullId());
+		};
+		if (std::erase_if(_tracks, matches)) {
 			_changes.fire({});
+		}
+		if (std::erase_if(_recent, matches)) {
+			_recentChanges.fire({});
 		}
 	}, _lifetime);
 }
@@ -87,6 +91,38 @@ void MusicQueue::clear() {
 
 const std::vector<MusicQueueTrack> &MusicQueue::tracks() const {
 	return _tracks;
+}
+
+void MusicQueue::remember(const AudioMsgId &id) {
+	const auto track = key(id);
+	if (!track.message || (_lastRemembered == track)) {
+		return;
+	} else if (!resolve(track)) {
+		return;
+	}
+	constexpr auto kMaxRecent = 40;
+	_lastRemembered = track;
+	std::erase(_recent, track);
+	_recent.insert(begin(_recent), track);
+	if (_recent.size() > kMaxRecent) {
+		_recent.pop_back();
+	}
+	_recentChanges.fire({});
+}
+
+void MusicQueue::clearRecent() {
+	if (!_recent.empty()) {
+		_recent.clear();
+		_recentChanges.fire({});
+	}
+}
+
+const std::vector<MusicQueueTrack> &MusicQueue::recent() const {
+	return _recent;
+}
+
+rpl::producer<> MusicQueue::recentChanges() const {
+	return _recentChanges.events();
 }
 
 AudioMsgId MusicQueue::resolve(MusicQueueTrack track) const {

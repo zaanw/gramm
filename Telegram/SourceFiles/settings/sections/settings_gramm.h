@@ -10,5 +10,6 @@ For license and copyright information see the repository's LEGAL file.
 namespace Settings {
 
 [[nodiscard]] Type GrammId();
+[[nodiscard]] Type GrammMusicId();
 
 } // namespace Settings
