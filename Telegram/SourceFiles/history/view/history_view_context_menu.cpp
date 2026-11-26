@@ -33,6 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/message_field.h" // FactcheckFieldIniter.
 #include "core/application.h"
 #include "core/click_handler_types.h"
+#include "core/core_settings.h"
 #include "core/file_utilities.h"
 #include "data/components/ephemeral_messages.h"
 #include "data/components/factchecks.h"
@@ -444,7 +445,10 @@ void AddDocumentActions(
 	const auto session = &document->session();
 	if (item
 		&& ::Media::Player::IsRealPlaybackContext(item)
-		&& document->isSharedMediaMusic()) {
+		&& document->isSharedMediaMusic()
+		&& Core::App().settings().readPref<bool>(
+			Core::kGrammMusicContextPref,
+			true)) {
 		const auto media = item->media();
 		if (media && !media->ttlSeconds()) {
 			const auto track = ::Media::Player::MusicQueueTrack{

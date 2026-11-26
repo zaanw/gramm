@@ -5,6 +5,7 @@ For license and copyright information see the repository's LEGAL file.
 */
 #include "settings/sections/settings_gramm.h"
 
+#include "base/platform/base_platform_info.h"
 #include "boxes/about_box.h"
 #include "boxes/compose_ai_box.h"
 #include "boxes/translate_box.h"
@@ -18,11 +19,14 @@ For license and copyright information see the repository's LEGAL file.
 #include "settings/sections/settings_active_sessions.h"
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_chat.h"
+#include "settings/sections/settings_gramm_config.h"
 #include "settings/sections/settings_main.h"
 #include "settings/sections/settings_notifications.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "settings/sections/settings_shortcuts.h"
+#include "settings/settings_builder.h"
 #include "settings/settings_common_session.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/layers/generic_box.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/fields/input_field.h"
@@ -36,8 +40,6 @@ For license and copyright information see the repository's LEGAL file.
 namespace Settings {
 namespace {
 
-constexpr auto kRoundedIconsPref = "gramm/settings/rounded-icons";
-
 enum class Page {
 	General,
 	Appearance,
@@ -46,12 +48,6 @@ enum class Page {
 	Ai,
 	About,
 };
-
-rpl::variable<bool> &RoundedIcons() {
-	static auto value = rpl::variable<bool>(
-		Core::App().settings().readPref<bool>(kRoundedIconsPref, true));
-	return value;
-}
 
 rpl::producer<QString> PageTitle(Page page) {
 	switch (page) {
@@ -82,6 +78,27 @@ void AddLink(
 		Fn<void(Type)> show,
 		Type target) {
 	AddAction(content, std::move(title), [=] { show(target); });
+}
+
+void AddLocalToggle(
+		not_null<Ui::VerticalLayout*> content,
+		rpl::producer<QString> title,
+		const char *key,
+		bool fallback) {
+	const auto current = [=] {
+		return Core::App().settings().readPref<bool>(key, fallback);
+	};
+	const auto button = content->add(object_ptr<Ui::SettingsButton>(
+		content,
+		std::move(title),
+		st::settingsButtonNoIcon));
+	button->toggleOn(GrammSettingsImported() | rpl::map(current));
+	button->toggledChanges() | rpl::filter([=](bool toggled) {
+		return toggled != current();
+	}) | rpl::on_next([=](bool toggled) {
+		Core::App().settings().writePref<bool>(key, toggled);
+		Core::App().saveSettingsDelayed();
+	}, button->lifetime());
 }
 
 not_null<Ui::InputField*> AddInput(
@@ -184,6 +201,36 @@ void SetupPage(
 		SetupLanguageButton(&controller->window(), content);
 		AddLink(content, tr::lng_settings_section_notify(), show, NotificationsId());
 		AddLink(content, tr::lng_settings_shortcuts(), show, ShortcutsId());
+		AddLocalToggle(
+			content,
+			tr::lng_gramm_drawer_shortcut(),
+			Core::kGrammDrawerShortcutPref,
+			false);
+		AddLocalToggle(
+			content,
+			tr::lng_gramm_music_context(),
+			Core::kGrammMusicContextPref,
+			true);
+		if (Platform::IsWindows()) {
+			AddAction(content, tr::lng_gramm_icon_picker(), [=] {
+				ShowGrammIconPicker(controller);
+			});
+		}
+		Ui::AddDivider(content);
+		AddAction(content, tr::lng_gramm_register_tg(), [=] {
+			controller->show(Ui::MakeConfirmBox({
+				.text = tr::lng_gramm_register_tg_about(),
+				.confirmed = [] { Core::RegisterTelegramUrlScheme(); },
+				.confirmText = tr::lng_gramm_register_tg_confirm(),
+			}));
+		});
+		AddAction(content, tr::lng_gramm_config_import(), [=] {
+			ImportGrammSettings(controller);
+		});
+		AddAction(content, tr::lng_gramm_config_export(), [=] {
+			ExportGrammSettings(controller);
+		});
+		Ui::AddDividerText(content, tr::lng_gramm_config_about());
 		break;
 	case Page::Appearance: {
 		AddLink(content, tr::lng_settings_section_chat_settings(), show, ChatId());
@@ -191,19 +238,26 @@ void SetupPage(
 			SetupInterfaceScale(&controller->window(), content);
 		}
 		SetupAnimations(&controller->window(), content);
-		auto &rounded = RoundedIcons();
 		const auto button = AddDetailedSettingsButton(
 			content,
 			tr::lng_gramm_round_icons(),
 			tr::lng_gramm_round_icons_about(),
 			{ &st::menuIconPalette },
-			rounded.value(),
+			GrammRoundedIcons(),
 			st::grammHubRow);
 		button->toggledChanges() | rpl::on_next([](bool value) {
-			RoundedIcons() = value;
-			Core::App().settings().writePref<bool>(kRoundedIconsPref, value);
-			Core::App().saveSettingsDelayed();
+			SetGrammRoundedIcons(value);
 		}, button->lifetime());
+		const auto tails = AddDetailedSettingsButton(
+			content,
+			tr::lng_gramm_hide_tails(),
+			tr::lng_gramm_hide_tails_about(),
+			{ &st::menuIconChatBubble },
+			GrammSettingsImported() | rpl::map(GrammHideBubbleTails),
+			st::grammHubRow);
+		tails->toggledChanges() | rpl::on_next([](bool hidden) {
+			SetGrammHideBubbleTails(hidden);
+		}, tails->lifetime());
 	} break;
 	case Page::Profile:
 		SetupProfile(content, controller);
@@ -257,7 +311,7 @@ public:
 		const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 		Ui::AddDividerText(content, tr::lng_gramm_hub_intro());
 		const auto rows = content->add(object_ptr<Ui::VerticalLayout>(content));
-		RoundedIcons().value() | rpl::on_next([=](bool rounded) {
+		GrammRoundedIcons() | rpl::on_next([=](bool rounded) {
 			rows->clear();
 			const auto &rowStyle = rounded
 				? st::grammHubRow
@@ -304,6 +358,78 @@ public:
 		return tr::lng_gramm_settings();
 	}
 };
+
+using SearchLabel = const tr::phrase<>*;
+struct SearchPage {
+	Builder::SectionMeta meta;
+	std::vector<SearchLabel> options;
+};
+
+const auto kSearchPages = std::vector<SearchPage>{
+	{ { GrammHub::Id(), MainId(), &tr::lng_gramm_settings,
+		&st::menuIconSettings }, {} },
+	{ { GrammPage<Page::General>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_general, &st::menuIconSettings }, {
+			&tr::lng_gramm_register_tg,
+			&tr::lng_gramm_drawer_shortcut,
+			&tr::lng_gramm_music_context,
+			&tr::lng_gramm_config_import,
+			&tr::lng_gramm_config_export,
+		} },
+	{ { GrammPage<Page::Appearance>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_appearance, &st::menuIconPalette }, {
+			&tr::lng_gramm_round_icons,
+			&tr::lng_gramm_hide_tails,
+		} },
+	{ { GrammMusicId(), GrammHub::Id(),
+		&tr::lng_gramm_music, &st::menuIconSoundOn }, {
+			&tr::lng_gramm_queue_title,
+			&tr::lng_gramm_repeat,
+			&tr::lng_gramm_history_title,
+		} },
+	{ { GrammPage<Page::Profile>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_profile, &st::menuIconProfile }, {
+			&tr::lng_gramm_profile_name,
+		} },
+	{ { GrammPage<Page::Privacy>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_privacy, &st::menuIconLock }, {} },
+	{ { GrammPage<Page::Ai>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_ai, &st::menuIconTranslate }, {
+			&tr::lng_gramm_ai_translate,
+			&tr::lng_gramm_ai_edit,
+		} },
+	{ { GrammPage<Page::About>::Id(), GrammHub::Id(),
+		&tr::lng_gramm_about_title, &st::menuIconInfo }, {
+			&tr::lng_gramm_about_details,
+			&tr::lng_gramm_about_releases,
+			&tr::lng_gramm_about_github,
+		} },
+};
+
+const auto kRegisterSearch = [] {
+	auto &registry = Builder::SearchRegistry::Instance();
+	for (const auto &page : kSearchPages) {
+		registry.add(&page.meta, [page = &page](not_null<Main::Session*>) {
+			auto result = std::vector<Builder::SearchEntry>();
+			if (Platform::IsWindows() && page->meta.id == GrammPage<Page::General>::Id()) {
+				result.push_back({
+					.title = tr::lng_gramm_icon_picker(tr::now),
+					.section = page->meta.id,
+					.icon = { page->meta.icon },
+				});
+			}
+			for (const auto label : page->options) {
+				result.push_back({
+					.title = (*label)(tr::now),
+					.section = page->meta.id,
+					.icon = { page->meta.icon },
+				});
+			}
+			return result;
+		});
+	}
+	return true;
+}();
 
 } // namespace
 

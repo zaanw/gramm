@@ -2086,6 +2086,8 @@ PRIVATE
     settings/sections/settings_main.cpp
     settings/sections/settings_gramm.cpp
     settings/sections/settings_gramm.h
+    settings/sections/settings_gramm_config.cpp
+    settings/sections/settings_gramm_config.h
     settings/sections/settings_gramm_hub.cpp
     settings/sections/settings_main.h
     settings/settings_recent_searches.cpp

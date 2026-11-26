@@ -148,12 +148,14 @@ const char kOptionDisableTouchbar[] = "touchbar-disabled";
 
 const QImage &Logo() {
 	static const auto result = QImage(u":/gui/art/logo_256.png"_q);
-	return result;
+	const auto &custom = OverridenIcon();
+	return (Platform::IsWindows() && !custom.isNull()) ? custom : result;
 }
 
 const QImage &LogoNoMargin() {
 	static const auto result = QImage(u":/gui/art/logo_256_no_margin.png"_q);
-	return result;
+	const auto &custom = OverridenIcon();
+	return (Platform::IsWindows() && !custom.isNull()) ? custom : result;
 }
 
 void ConvertIconToBlack(QImage &image) {
@@ -205,6 +207,16 @@ void ConvertIconToBlack(QImage &image) {
 
 void OverrideApplicationIcon(QImage image) {
 	OverridenIcon() = std::move(image);
+}
+
+void RestoreGrammApplicationIcon() {
+	if (Platform::IsWindows()) {
+		const auto packed = Core::App().settings().readPref<QByteArray>(
+			Core::kGrammApplicationIconPref);
+		OverrideApplicationIcon(packed.isEmpty()
+			? QImage()
+			: QImage::fromData(packed, "PNG"));
+	}
 }
 
 QIcon CreateSupportIcon(Main::Session *session) {

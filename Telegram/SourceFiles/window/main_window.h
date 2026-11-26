@@ -38,6 +38,7 @@ struct SeparateId;
 [[nodiscard]] const QImage &Logo();
 [[nodiscard]] const QImage &LogoNoMargin();
 void OverrideApplicationIcon(QImage image);
+void RestoreGrammApplicationIcon();
 [[nodiscard]] QIcon CreateIcon(
 	Main::Session *session = nullptr,
 	bool returnNullIfDefault = false);

@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "calls/calls_instance.h"
 #include "core/application.h"
 #include "core/click_handler_types.h"
+#include "core/core_settings.h"
 #include "core/update_channel.h"
 #include "data/data_changes.h"
 #include "data/data_document_media.h"
@@ -40,6 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtproto_config.h"
 #include "settings/sections/settings_advanced.h"
 #include "settings/sections/settings_calls.h"
+#include "settings/sections/settings_gramm.h"
 #include "settings/sections/settings_information.h"
 #include "settings/settings_common.h"
 #include "storage/localstorage.h"
@@ -774,6 +776,15 @@ void MainMenu::setupMenu() {
 	)->setClickedCallback([=] {
 		controller->showSettings();
 	});
+
+	if (Core::App().settings().readPref<bool>(Core::kGrammDrawerShortcutPref)) {
+		addAction(
+			tr::lng_gramm_settings(),
+			{ &st::menuIconManage }
+		)->setClickedCallback([=] {
+			controller->showSettings(Settings::GrammId());
+		});
+	}
 
 	_nightThemeToggle = addAction(
 		tr::lng_menu_night_mode(),
