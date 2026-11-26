@@ -38,7 +38,11 @@ For license and copyright information see the repository's LEGAL file.
 #include "styles/style_settings.h"
 #include "styles/style_info.h"
 
+#include <algorithm>
 #include <memory>
+
+#include <QtGui/QClipboard>
+#include <QtGui/QGuiApplication>
 
 namespace Settings {
 namespace {
@@ -152,10 +156,17 @@ void SetupProfile(
 				tr::now,
 				lt_count,
 				int(localProfile->gifts.size()));
-			for (const auto &gift : localProfile->gifts) {
+			const auto previewCount = std::min<size_t>(
+				localProfile->gifts.size(),
+				3);
+			for (size_t i = 0; i != previewCount; ++i) {
+				const auto &gift = localProfile->gifts[i];
 				text += u"\n🎁 "_q + gift.name
 					+ u" · "_q + gift.pattern
 					+ u" · "_q + gift.background;
+			}
+			if (localProfile->gifts.size() > previewCount) {
+				text += u"\n…"_q;
 			}
 		}
 		*localProfilePreview = text;
@@ -244,6 +255,22 @@ void SetupProfile(
 			*localProfile);
 		refreshLocalProfilePreview();
 		controller->showToast(tr::lng_gramm_profile_saved(tr::now));
+	});
+	AddAction(content, tr::lng_gramm_profile_copy_card(), [=] {
+		const auto card = CreateGrammProfileCard(
+			controller->session().userId().bare,
+			*localProfile);
+		if (!card.isEmpty()) {
+			QGuiApplication::clipboard()->setText(card);
+			controller->showToast(tr::lng_gramm_profile_card_copied(tr::now));
+		}
+	});
+	AddAction(content, tr::lng_gramm_profile_import_card(), [=] {
+		const auto imported = ImportGrammProfileCard(
+			QGuiApplication::clipboard()->text());
+		controller->showToast(imported
+			? tr::lng_gramm_profile_card_imported(tr::now)
+			: tr::lng_gramm_profile_card_invalid(tr::now));
 	});
 	AddAction(content, tr::lng_gramm_gifts_clear(), [=] {
 		localProfile->gifts.clear();
@@ -508,6 +535,8 @@ const auto kSearchPages = std::vector<SearchPage>{
 	{ { GrammPage<Page::Profile>::Id(), GrammHub::Id(),
 		&tr::lng_gramm_profile, &st::menuIconProfile }, {
 			&tr::lng_gramm_profile_name,
+			&tr::lng_gramm_profile_copy_card,
+			&tr::lng_gramm_profile_import_card,
 		} },
 	{ { GrammPage<Page::Privacy>::Id(), GrammHub::Id(),
 		&tr::lng_gramm_privacy, &st::menuIconLock }, {} },

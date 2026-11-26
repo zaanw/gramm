@@ -528,16 +528,21 @@ TopBar::TopBar(
 
 	_title->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
 	_title->setSelectable(true);
-	if (_peer->isSelf()
-		&& _source != Source::Preview
-		&& Settings::LoadGrammLocalProfile(
-			_peer->session().uniqueId()).ownerBadge) {
+	const auto grammProfile = _peer->isSelf()
+		? Settings::LoadGrammLocalProfile(_peer->session().uniqueId())
+		: (_peer->isUser()
+			? Settings::LoadGrammSharedProfile(_peer->id.bare)
+			: Settings::GrammLocalProfileData{});
+	if (_source != Source::Preview
+		&& grammProfile.ownerBadge
+		&& (_peer->isSelf() || _peer->isUser())) {
 		_grammOwnerBadge = object_ptr<Ui::FlatLabel>(
 			this,
 			rpl::single(u"👑 G"_q),
 			st::infoProfileStatus);
-		_grammOwnerBadge->setToolTip(
-			tr::lng_gramm_owner_badge_tooltip(tr::now));
+		_grammOwnerBadge->setToolTip(_peer->isSelf()
+			? tr::lng_gramm_owner_badge_tooltip(tr::now)
+			: tr::lng_gramm_shared_badge_tooltip(tr::now));
 		_grammOwnerBadge->show();
 		_grammOwnerBadge->naturalWidthValue() | rpl::on_next([=](int width) {
 			_grammOwnerBadge->resizeToNaturalWidth(width);

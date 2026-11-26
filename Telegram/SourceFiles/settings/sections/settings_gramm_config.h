@@ -37,5 +37,10 @@ void ExportGrammSettings(not_null<Window::SessionController*> controller);
 void ShowGrammIconPicker(not_null<Window::SessionController*> controller);
 [[nodiscard]] GrammLocalProfileData LoadGrammLocalProfile(quint64 sessionId);
 void SaveGrammLocalProfile(quint64 sessionId, const GrammLocalProfileData &data);
+[[nodiscard]] GrammLocalProfileData LoadGrammSharedProfile(qint64 peerId);
+[[nodiscard]] QString CreateGrammProfileCard(
+	qint64 peerId,
+	const GrammLocalProfileData &data);
+[[nodiscard]] bool ImportGrammProfileCard(const QString &card);
 
 } // namespace Settings
