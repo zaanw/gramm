@@ -154,7 +154,7 @@ void SetupProfile(
 		} else {
 			text += u"\n"_q + tr::lng_gramm_gifts_count(
 				tr::now,
-				lt_count,
+				lt_number,
 				int(localProfile->gifts.size()));
 			const auto previewCount = std::min<size_t>(
 				localProfile->gifts.size(),

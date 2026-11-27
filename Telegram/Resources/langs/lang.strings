@@ -956,7 +956,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_gramm_gift_add" = "Give Gift Locally";
 "lng_gramm_gift_added" = "Gift added to the local profile.";
 "lng_gramm_gifts_empty" = "No local gifts yet.";
-"lng_gramm_gifts_count" = "Local gifts: {count}";
+"lng_gramm_gifts_count" = "Local gifts: {number}";
 "lng_gramm_gifts_clear" = "Clear Local Gifts";
 "lng_gramm_ai_manual" = "Enter text to translate or edit with Telegram. Text is sent when you use the chosen tool.";
 "lng_gramm_ai_input" = "Enter your text";
