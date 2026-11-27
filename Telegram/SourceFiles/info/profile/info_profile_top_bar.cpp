@@ -529,10 +529,11 @@ TopBar::TopBar(
 	_title->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
 	_title->setSelectable(true);
 	const auto grammProfile = _peer->isSelf()
-		? Settings::LoadGrammLocalProfile(_peer->session().uniqueId())
+		? ::Settings::LoadGrammLocalProfile(_peer->session().uniqueId())
 		: (_peer->isUser()
-			? Settings::LoadGrammSharedProfile(_peer->id.bare)
-			: Settings::GrammLocalProfileData{});
+			? ::Settings::LoadGrammSharedProfile(
+				_peer->id.value & PeerId::kChatTypeMask)
+			: ::Settings::GrammLocalProfileData{});
 	if (_source != Source::Preview
 		&& grammProfile.ownerBadge
 		&& (_peer->isSelf() || _peer->isUser())) {
