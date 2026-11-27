@@ -24,6 +24,10 @@ void TranslateBox(
 	MsgId msgId,
 	TextWithEntities text,
 	bool hasCopyRestriction);
+void TranslateTextWithTelegramBox(
+	not_null<GenericBox*> box,
+	not_null<PeerData*> peer,
+	TextWithEntities text);
 
 [[nodiscard]] bool SkipTranslate(TextWithEntities textWithEntities);
 

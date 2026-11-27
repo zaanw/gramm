@@ -110,6 +110,13 @@ bool DarkTasbarValueValid/* = false*/;
 	static auto ScaledLogoNoMargin = base::flat_map<int, QImage>();
 	static auto ScaledLogoDark = base::flat_map<int, QImage>();
 	static auto ScaledLogoLight = base::flat_map<int, QImage>();
+	static auto LogoKey = qint64(0);
+	const auto key = Window::Logo().cacheKey();
+	if (key != LogoKey) {
+		LogoKey = key;
+		ScaledLogo.clear();
+		ScaledLogoNoMargin.clear();
+	}
 
 	const auto darkMode = IsDarkTaskbar();
 	auto &scaled = (monochrome && darkMode)

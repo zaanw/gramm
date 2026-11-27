@@ -318,6 +318,7 @@ void Application::run() {
 	_notifications = std::make_unique<Window::Notifications::System>();
 
 	startLocalStorage();
+	Window::RestoreGrammApplicationIcon();
 
 	style::SetCustomFont(settings().customFontFamily());
 	style::internal::StartFonts();
@@ -2210,7 +2211,7 @@ void Application::startShortcuts() {
 	}, _lifetime);
 }
 
-void Application::RegisterUrlScheme() {
+void RegisterTelegramUrlScheme() {
 	const auto arguments = Launcher::Instance().customWorkingDir()
 		? u"-workdir \"%1\""_q.arg(cWorkingDir())
 		: QString();
@@ -2220,12 +2221,18 @@ void Application::RegisterUrlScheme() {
 		.arguments = arguments,
 		.protocol = u"tg"_q,
 		.protocolName = u"Telegram Link"_q,
-		.shortAppName = u"tdesktop"_q,
+		.shortAppName = Platform::IsWindows() ? u"gramm"_q : u"tdesktop"_q,
 		.longAppName = QCoreApplication::applicationName(),
 		.displayAppName = AppName.utf16(),
 		.displayAppDescription = AppName.utf16(),
 	});
+}
 
+void Application::RegisterUrlScheme() {
+	RegisterTelegramUrlScheme();
+	const auto arguments = Launcher::Instance().customWorkingDir()
+		? u"-workdir \"%1\""_q.arg(cWorkingDir())
+		: QString();
 	base::Platform::RegisterUrlScheme(base::Platform::UrlSchemeDescriptor{
 		.executable = Platform::ExecutablePathForShortcuts(),
 		.arguments = arguments,

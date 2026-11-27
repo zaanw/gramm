@@ -1,4 +1,20 @@
-# Agent Guide for Telegram Desktop
+# Agent Guide for Gramm
+
+Gramm is an independent client based on Telegram Desktop. Read [RULES.md](RULES.md)
+for project rules, [the architecture map](docs/gramm-architecture.md) for source
+ownership, and [the Windows x64 guide](docs/building-gramm-windows.md) to reproduce
+the build.
+
+- Work on the user-authorized branch. The setup work belongs on
+  `codex/setup`.
+- Before editing client code, read the area entry in
+  [the source atlas](Telegram/SourceFiles/AGENTS.md) and any instructions inside
+  that area.
+- Record test commands and the results observed for the exact Git commit.
+  A green build verifies compilation and linking. Verify sign-in and Music+
+  in a running Windows client.
+
+## Upstream development guide
 
 This guide defines repository-wide instructions for coding agents working with the Telegram Desktop codebase.
 

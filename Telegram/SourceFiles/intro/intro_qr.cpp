@@ -576,7 +576,8 @@ QImage TelegramLogoImage() {
 		p.setBrush(QrActiveColor());
 		p.setPen(Qt::NoPen);
 		p.drawEllipse(QRect(QPoint(), size));
-		st::introQrPlane.paintInCenter(p, QRect(QPoint(), size));
+		p.drawImage(QRect(QPoint(), size),
+			QImage(u":/gui/art/logo_256_no_margin.png"_q));
 	}
 	return result;
 }

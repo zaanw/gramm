@@ -12,7 +12,8 @@ DetailedSettingsButton::DetailedSettingsButton(
 	rpl::producer<QString> description,
 	Settings::IconDescriptor icon,
 	std::optional<rpl::producer<bool>> toggled,
-	const style::DetailedSettingsButtonStyle &rowStyle)
+		const style::DetailedSettingsButtonStyle &rowStyle,
+		bool navigation)
 : Ui::RippleButton(parent, rowStyle.button.ripple)
 , _style(rowStyle)
 , _title(0)
@@ -23,7 +24,8 @@ DetailedSettingsButton::DetailedSettingsButton(
 	[this] { rtlupdate(toggleRect()); }) : nullptr)
 , _iconForeground(icon.icon)
 , _iconBackground(icon.background)
-, _iconBackgroundBrush(std::move(icon.backgroundBrush)) {
+, _iconBackgroundBrush(std::move(icon.backgroundBrush))
+, _navigation(navigation) {
 	std::move(
 		title
 	) | rpl::on_next([=](const QString &text) {
@@ -163,6 +165,14 @@ void DetailedSettingsButton::paintEvent(QPaintEvent *e) {
 		const auto toggle = toggleRect();
 		_toggle->paint(p, toggle.left(), toggle.top(), width());
 	}
+	if (_navigation) {
+		const auto &arrow = st::settingsPremiumArrow;
+		arrow.paint(
+			p,
+			width() - _style.button.padding.right() - arrow.width(),
+			(height() - arrow.height()) / 2,
+			width());
+	}
 }
 
 int DetailedSettingsButton::resizeGetHeight(int newWidth) {
@@ -216,6 +226,7 @@ int DetailedSettingsButton::textAvailableWidth(int outerw) const {
 		outerw
 			- _style.button.padding.left()
 			- _style.button.padding.right()
+			- (_navigation ? st::settingsPremiumArrow.width() : 0)
 			- toggleWidth);
 }
 

@@ -33,6 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/message_field.h" // FactcheckFieldIniter.
 #include "core/application.h"
 #include "core/click_handler_types.h"
+#include "core/core_settings.h"
 #include "core/file_utilities.h"
 #include "data/components/ephemeral_messages.h"
 #include "data/components/factchecks.h"
@@ -76,6 +77,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "media/audio/media_audio.h"
 #include "media/player/media_player_instance.h"
+#include "media/player/media_player_music_queue.h"
 #include "menu/menu_item_download_files.h"
 #include "menu/menu_item_rate_transcribe.h"
 #include "menu/menu_item_rate_transcribe_session.h"
@@ -438,15 +440,44 @@ void AddDocumentActions(
 		not_null<DocumentData*> document,
 		HistoryItem *item,
 		not_null<ListWidget*> list) {
+	const auto controller = list->controller();
+	const auto contextId = item ? item->fullId() : FullMsgId();
+	const auto session = &document->session();
+	if (item
+		&& ::Media::Player::IsRealPlaybackContext(item)
+		&& document->isSharedMediaMusic()
+		&& Core::App().settings().readPref<bool>(
+			Core::kGrammMusicContextPref,
+			true)) {
+		const auto media = item->media();
+		if (media && !media->ttlSeconds()) {
+			const auto track = ::Media::Player::MusicQueueTrack{
+				contextId,
+				document->id,
+			};
+			const auto enqueue = [=](bool playNext) {
+				const auto player = ::Media::Player::instance();
+				if (player->musicQueue(session).enqueue(
+						track,
+						player->current(AudioMsgId::Type::Song),
+						playNext)) {
+					controller->showToast(tr::lng_gramm_music_added(tr::now));
+				}
+			};
+			menu->addAction(tr::lng_gramm_music_next(tr::now), [=] {
+				enqueue(true);
+			}, &st::menuIconAdd);
+			menu->addAction(tr::lng_gramm_music_add(tr::now), [=] {
+				enqueue(false);
+			}, &st::menuIconAdd);
+		}
+	}
 	if (document->loading()) {
 		menu->addAction(tr::lng_context_cancel_download(tr::now), [=] {
 			document->cancel();
 		}, &st::menuIconCancel);
 		return;
 	}
-	const auto controller = list->controller();
-	const auto contextId = item ? item->fullId() : FullMsgId();
-	const auto session = &document->session();
 	if (item && document->isGifv()) {
 		const auto notAutoplayedGif = !Data::AutoDownload::ShouldAutoPlay(
 			document->session().settings().autoDownload(),

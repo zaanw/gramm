@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/premium_preview_box.h"
 #include "boxes/share_box.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "core/click_handler_types.h" // ClickHandlerContext
 #include "core/ui_integration.h"
 #include "core/update_checker.h"
@@ -6654,6 +6655,7 @@ Ui::BubbleRounding Message::countMessageRounding() const {
 			&& (rich->article.edgeBlocks().bottom == Block::VisualMedia);
 	};
 	const auto skipTail = smallBottom
+		|| Core::App().settings().readPref<bool>(Core::kGrammHideBubbleTailsPref)
 		|| (media && media->skipBubbleTail())
 		|| (rich && richMediaAtBottom())
 		|| (keyboard != nullptr)

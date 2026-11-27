@@ -60,11 +60,12 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Telegram FZ-LLC"
-            VALUE "FileDescription", "Telegram Desktop"
+            VALUE "CompanyName", "Gramm"
+            VALUE "FileDescription", "Gramm"
             VALUE "FileVersion", "7.4.6.0"
             VALUE "LegalCopyright", "Copyright (C) 2014-2026"
-            VALUE "ProductName", "Telegram Desktop"
+            VALUE "ProductName", "Gramm"
+            VALUE "OriginalFilename", "Gramm.exe"
             VALUE "ProductVersion", "7.4.6.0"
         END
     END

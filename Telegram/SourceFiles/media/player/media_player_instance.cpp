@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/audio/media_audio.h"
 #include "media/audio/media_audio_capture.h"
 #include "media/player/media_player_listen_tracker.h"
+#include "media/player/media_player_music_queue.h"
 #include "media/streaming/media_streaming_instance.h"
 #include "media/streaming/media_streaming_player.h"
 #include "media/view/media_view_playback_progress.h"
@@ -612,7 +613,19 @@ bool Instance::moveInPlaylist(
 		not_null<Data*> data,
 		int delta,
 		bool autonext) {
-	if (moveInItem(data, delta, autonext)) {
+	if (const auto queue = activeMusicQueue(data)) {
+		const auto audio = queue->adjacent(
+			data->current,
+			delta,
+			repeat(data) == RepeatMode::All);
+		if (audio) {
+			if (autonext) {
+				_switchToNext.fire({ data->current, audio.contextId() });
+			}
+			play(audio);
+		}
+		return bool(audio);
+	} else if (moveInItem(data, delta, autonext)) {
 		return true;
 	} else if (!data->playlistIndex) {
 		return false;
@@ -806,7 +819,12 @@ bool Instance::previousAvailable(AudioMsgId::Type type) const {
 	const auto data = getData(type);
 	Assert(data != nullptr);
 
-	if (trackInItem(data, -1)) {
+	if (const auto queue = activeMusicQueue(data)) {
+		return bool(queue->adjacent(
+			data->current,
+			-1,
+			repeat(data) == RepeatMode::All));
+	} else if (trackInItem(data, -1)) {
 		return true;
 	} else if (!data->playlistIndex || !data->playlistSlice) {
 		return false;
@@ -825,7 +843,12 @@ bool Instance::nextAvailable(AudioMsgId::Type type) const {
 	const auto data = getData(type);
 	Assert(data != nullptr);
 
-	if (trackInItem(data, 1)) {
+	if (const auto queue = activeMusicQueue(data)) {
+		return bool(queue->adjacent(
+			data->current,
+			1,
+			repeat(data) == RepeatMode::All));
+	} else if (trackInItem(data, 1)) {
 		return true;
 	} else if (!data->playlistIndex || !data->playlistSlice) {
 		return false;
@@ -852,6 +875,9 @@ rpl::producer<> Media::Player::Instance::playlistChanges(
 
 	return rpl::merge(
 		data->playlistChanges.events(),
+		(type == AudioMsgId::Type::Song
+			? _musicQueueChanges.events()
+			: rpl::never<>()),
 		orderChanges(data) | rpl::to_empty,
 		repeatChanges(data) | rpl::to_empty);
 }
@@ -1474,6 +1500,9 @@ void Instance::emitUpdate(AudioMsgId::Type type, CheckCallback check) {
 		}
 		if (type == AudioMsgId::Type::Song) {
 			_listenTracker->update(state);
+			if (data->session && state.state == State::Playing) {
+				musicQueue(data->session).remember(state.id);
+			}
 		}
 
 		auto finished = false;

@@ -518,5 +518,6 @@ void Quit(QuitReason reason = QuitReason::Default);
 [[nodiscard]] bool Quitting();
 
 void Restart();
+void RegisterTelegramUrlScheme();
 
 } // namespace Core

@@ -72,6 +72,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/stories/media_stories_post.h"
 #include "menu/menu_mute.h"
 #include "settings/sections/settings_premium.h"
+#include "settings/sections/settings_gramm_config.h"
 #include "settings/settings_credits_graphics.h"
 #include "storage/storage_media_prepare.h"
 #include "ui/boxes/show_or_premium_box.h"
@@ -527,6 +528,27 @@ TopBar::TopBar(
 
 	_title->setContextCopyText(tr::lng_profile_copy_fullname(tr::now));
 	_title->setSelectable(true);
+	const auto grammProfile = _peer->isSelf()
+		? ::Settings::LoadGrammLocalProfile(_peer->session().uniqueId())
+		: (_peer->isUser()
+			? ::Settings::LoadGrammSharedProfile(
+				_peer->id.value & PeerId::kChatTypeMask)
+			: ::Settings::GrammLocalProfileData{});
+	if (_source != Source::Preview
+		&& grammProfile.ownerBadge
+		&& (_peer->isSelf() || _peer->isUser())) {
+		_grammOwnerBadge = object_ptr<Ui::FlatLabel>(
+			this,
+			rpl::single(u"👑 G"_q),
+			st::infoProfileStatus);
+		_grammOwnerBadge->setToolTip(_peer->isSelf()
+			? tr::lng_gramm_owner_badge_tooltip(tr::now)
+			: tr::lng_gramm_shared_badge_tooltip(tr::now));
+		_grammOwnerBadge->show();
+		_grammOwnerBadge->naturalWidthValue() | rpl::on_next([=](int width) {
+			_grammOwnerBadge->resizeToNaturalWidth(width);
+		}, _grammOwnerBadge->lifetime());
+	}
 
 	auto badgeUpdates = rpl::producer<rpl::empty_value>();
 	if (_badge) {
@@ -2209,6 +2231,7 @@ void TopBar::updateTitlePosition(float64 progressCurrent) {
 	const auto verifiedWidget = _verified ? _verified->widget() : nullptr;
 	const auto badgeWidget = _badge ? _badge->widget() : nullptr;
 	const auto botVerifyWidget = _botVerify ? _botVerify->widget() : nullptr;
+	const auto grammOwnerWidget = _grammOwnerBadge.data();
 	auto badgesWidth = 0;
 	if (verifiedWidget) {
 		badgesWidth += verifiedWidget->width();
@@ -2218,6 +2241,9 @@ void TopBar::updateTitlePosition(float64 progressCurrent) {
 	}
 	if (botVerifyWidget) {
 		badgesWidth += botVerifyWidget->width();
+	}
+	if (grammOwnerWidget) {
+		badgesWidth += grammOwnerWidget->width();
 	}
 	if (verifiedWidget || badgeWidget) {
 		badgesWidth += st::infoVerifiedCheckPosition.x();
@@ -2254,6 +2280,10 @@ void TopBar::updateTitlePosition(float64 progressCurrent) {
 		totalElementsWidth += st::infoVerifiedCheckPosition.x();
 	}
 	totalElementsWidth += botVerifySkip;
+	if (grammOwnerWidget) {
+		totalElementsWidth += grammOwnerWidget->width();
+		totalElementsWidth += st::infoVerifiedCheckPosition.x();
+	}
 
 	auto titleLeft = anim::interpolate(
 		titleMostLeft,
@@ -2278,6 +2308,17 @@ void TopBar::updateTitlePosition(float64 progressCurrent) {
 			badgeLeft + (badgeWidget ? badgeWidget->width() : 0),
 			badgeTop,
 			badgeBottom);
+	}
+	if (_grammOwnerBadge) {
+		const auto left = badgeLeft
+			+ (badgeWidget ? badgeWidget->width() : 0)
+			+ (verifiedWidget ? verifiedWidget->width() : 0)
+			+ ((verifiedWidget || badgeWidget)
+				? st::infoVerifiedCheckPosition.x()
+				: 0);
+		_grammOwnerBadge->moveToLeft(
+			left + st::infoVerifiedCheckPosition.x(),
+			titleTop);
 	}
 }
 

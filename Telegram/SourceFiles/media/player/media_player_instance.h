@@ -10,6 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_audio_msg_id.h"
 #include "data/data_shared_media.h"
 
+#include <map>
+
 class AudioMsgId;
 class DocumentData;
 class History;
@@ -53,6 +55,7 @@ extern const char kOptionDisableAutoplayNext[];
 
 class Instance;
 class MusicListenTracker;
+class MusicQueue;
 struct TrackState;
 
 struct PlaylistContext {
@@ -85,6 +88,7 @@ public:
 	void playPause(AudioMsgId::Type type);
 	bool next(AudioMsgId::Type type);
 	bool previous(AudioMsgId::Type type);
+	[[nodiscard]] MusicQueue &musicQueue(not_null<Main::Session*> session);
 
 	AudioMsgId::Type getActiveType() const;
 
@@ -280,6 +284,8 @@ private:
 		int delta) const;
 	bool moveInItem(not_null<Data*> data, int delta, bool autonext);
 	bool moveInPlaylist(not_null<Data*> data, int delta, bool autonext);
+	[[nodiscard]] const MusicQueue *activeMusicQueue(
+		not_null<const Data*> data) const;
 	void updatePowerSaveBlocker(
 		not_null<Data*> data,
 		const TrackState &state);
@@ -347,9 +353,11 @@ private:
 	Data _songData;
 	Data _voiceData;
 	std::unique_ptr<MusicListenTracker> _listenTracker;
+	std::map<Main::Session*, std::unique_ptr<MusicQueue>> _musicQueues;
 	bool _roundPlaying = false;
 
 	rpl::event_stream<Switch> _switchToNext;
+	rpl::event_stream<> _musicQueueChanges;
 	rpl::event_stream<AudioMsgId::Type> _tracksFinished;
 	rpl::event_stream<AudioMsgId::Type> _trackChanged;
 	rpl::event_stream<AudioMsgId::Type> _playerStopped;

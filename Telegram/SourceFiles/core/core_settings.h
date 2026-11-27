@@ -37,6 +37,12 @@ enum class StickedTooltip;
 
 namespace Core {
 
+inline constexpr auto kGrammHideBubbleTailsPref
+	= "gramm/appearance/hide-bubble-tails";
+inline constexpr auto kGrammApplicationIconPref = "gramm/settings/app-icon";
+inline constexpr auto kGrammDrawerShortcutPref = "gramm/menu/drawer-shortcut";
+inline constexpr auto kGrammMusicContextPref = "gramm/menu/music-actions";
+
 inline constexpr auto kScreenReaderModeDisabledKey
 	= "screen-reader-mode-disabled"_cs;
 
