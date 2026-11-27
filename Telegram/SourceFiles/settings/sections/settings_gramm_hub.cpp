@@ -155,7 +155,7 @@ void SetupProfile(
 			text += u"\n"_q + tr::lng_gramm_gifts_count(
 				tr::now,
 				lt_number,
-				int(localProfile->gifts.size()));
+				QString::number(qulonglong(localProfile->gifts.size())));
 			const auto previewCount = std::min<size_t>(
 				localProfile->gifts.size(),
 				3);
@@ -173,13 +173,13 @@ void SetupProfile(
 	};
 	refreshLocalProfilePreview();
 	Ui::AddDividerText(content, localProfilePreview->value());
-	const auto badge = content->add(object_ptr<DetailedSettingsButton>(
+	const auto badge = AddDetailedSettingsButton(
 		content,
 		tr::lng_gramm_owner_badge(),
 		tr::lng_gramm_owner_badge_about(),
-		{ &st::infoStarsCrown },
+		{ .icon = &st::infoStarsCrown },
 		ownerBadge->value(),
-		st::grammHubRow));
+		st::grammHubRow);
 	badge->setToolTip(tr::lng_gramm_owner_badge_tooltip(tr::now));
 	badge->toggledChanges() | rpl::on_next([=](bool enabled) {
 		localProfile->ownerBadge = enabled;
